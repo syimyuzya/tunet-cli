@@ -2,37 +2,41 @@
 
 version 0.0.1
 
+by 思無邪SyiMyuZya
+
 ----
 
 清華校園網命令行版用戶認證工具。
 
 用於無圖形界面之環境。可顯示當前在線狀態、登入登出校園網。
 
+需要python2(>=2.6)以執行。
+
 1.  顯示在線狀態
 
     ```sh
-    python tunet.py
+    ./tunetctl
     ```
 
 2.  登入
 
     ```sh
-    python tunet.py -l
+    ./tunetctl -l  # （提示輸入用戶名、密碼）
     
     # 使用文件保存的用戶信息（計劃中，尚未實作）：
-    python tunet.py -lf user.txt
+    ./tunetctl -lf user.txt
     ```
 
 3.  登出
 
     ```sh
-    python tunet.py -o
+    ./tunetctl -o
     ```
 
 4.  顯示幫助
 
     ```sh
-    python tunet.py -h
+    ./tunetctl -h
     ```
 
 ----
