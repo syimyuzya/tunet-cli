@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # coding=utf-8
 
-# TUNet CLI
+# tunetctl: TUNet CLI
 # Command line tool for Tsinghua University net login
 # by SyiMyuZya <syimyuzya@gmail.com>
 
@@ -15,10 +15,24 @@ from md5 import md5
 from urllib import urlencode
 from urllib2 import urlopen
 
+try:
+    import readline
+except ImportError:
+    pass
+
+
+########
+
+# URLs
+
 URL_LOGIN = 'http://net.tsinghua.edu.cn/cgi-bin/do_login'
 URL_LOGOUT = 'http://net.tsinghua.edu.cn/cgi-bin/do_logout'
 
+
+########
+
 # utilities
+
 def check():
     '''
     Get online information of this connection.
@@ -45,6 +59,9 @@ def logout():
     '''
     return urlopen(URL_LOGOUT, b'').read()
 
+
+########
+
 # interface
 
 def show_version():
@@ -62,7 +79,7 @@ def show_usage():
           ' no option:',
           '  Show the current connect status of this device.',
           ' -l --login:',
-          '  Login.',
+          '  Login. Will prompt input for username and password',
           ' -o --logout:',
           '  Logout.',
           ' -h --help',
