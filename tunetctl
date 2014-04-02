@@ -7,6 +7,7 @@
 
 from __future__ import print_function, unicode_literals
 
+import json
 import sys
 
 from getopt import gnu_getopt, GetoptError
@@ -79,15 +80,19 @@ def show_usage():
           ' no option:',
           '  Show the current connect status of this device.',
           ' -l --login:',
-          '  Login. Will prompt input for username and password',
+          '  Login. Will prompt input for username and password.',
           ' -o --logout:',
           '  Logout.',
+          ' -f <file> --file=<file>',
+          '  Login with identity file <file>.',
+          ' -s <file> --save=<file>',
+          '  Login and save the identity info to <file>.',
           ' -h --help',
-          '  Print this message',
+          '  Print this message.',
           sep='\n',
           file=sys.stderr)
 
-def show_status():
+def show_status(**opt):
     print('Current status:')
     status = check()
     if len(status)==1:
@@ -100,37 +105,54 @@ def show_status():
               '  (Unknown arg3): '+status[3],
               sep='\n')
 
-def do_login():
-    print('User: ', end='')
-    username = raw_input()
-    password = md5(getpass()).hexdigest()
-    res = login(username, password)
+def do_login(**opt):
+    if opt.has_key('file'):
+        user = json.load(open(opt['file']))
+    else:
+        user = {}
+        print('User: ', end='')
+        user['name'] = raw_input()
+        user['pass'] = md5(getpass()).hexdigest()
+    if opt.has_key('save'):
+        json.dump(user, open(opt['save'], 'w'))
+    res = login(user['name'], user['pass'])
     print('Server response:', res)
     show_status()
 
-def do_logout():
+def do_logout(**opt):
     res = logout()
     print('Server response:', res)
 
 def main():
     try:
-        opts, args = gnu_getopt(sys.argv[1:], 'hlo', ['help', 'login', 'logout'])
+        opts, args = gnu_getopt(sys.argv[1:], 'hlof:s:',
+                ['help', 'login', 'logout', 'file=', 'save='])
         if len(args):
             raise GetoptError('unexpected argument '+args[0])
-        op = []
+        actions = set()
+        options = {}
         for opt in opts:
             if opt[0]=='-h' or opt[0]=='--help':
-                op.append('help')
+                actions.add('help')
             if opt[0]=='-l' or opt[0]=='--login':
-                op.append('login')
+                actions.add('login')
             if opt[0]=='-o' or opt[0]=='--logout':
-                op.append('logout')
-        if len(op)==0:
+                actions.add('logout')
+            if opt[0]=='-f' or opt[0]=='--file':
+                actions.add('login')
+                options['file'] = opt[1]
+            if opt[0]=='-s' or opt[0]=='--save':
+                actions.add('login')
+                options['save'] = opt[1]
+        if len(actions)==0:
             show_status()
-        elif len(op)>1:
-            raise GetoptError('can not perform multiple actions: '+repr(op))
+        elif len(actions)>1:
+            raise GetoptError('can not perform multiple actions: '
+                    +repr(list(actions)))
         else:
-            {'help':show_usage, 'login':do_login, 'logout':do_logout}[op[0]]()
+            {'help':show_usage,
+             'login':do_login,
+             'logout':do_logout}[next(iter(actions))](**options)
     except GetoptError as e:
         print('Err: '+e.msg,
               'Use -h(--help) for help',
