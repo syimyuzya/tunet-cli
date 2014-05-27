@@ -1,13 +1,16 @@
 #! /usr/bin/env python
 # coding=utf-8
 
-# tunetctl: TUNet CLI
-# Command line tool for Tsinghua University net login
-# by SyiMyuZya <syimyuzya@gmail.com>
+'''
+tunetctl: TUNet CLI
+Command line tool for Tsinghua University net login
+by SyiMyuZya <syimyuzya@gmail.com>
+'''
 
 from __future__ import print_function, unicode_literals
 
 import json
+import os
 import sys
 
 from getopt import gnu_getopt, GetoptError
@@ -87,6 +90,8 @@ def show_usage():
           '  Login with identity file <file>.',
           ' -s <file> --save=<file>',
           '  Login and save the identity info to <file>.',
+          ' -d --default',
+          '  Login with the default identity file.(~/.tunet)',
           ' -h --help',
           '  Print this message.',
           sep='\n',
@@ -125,8 +130,8 @@ def do_logout(**opt):
 
 def main():
     try:
-        opts, args = gnu_getopt(sys.argv[1:], 'hlof:s:',
-                ['help', 'login', 'logout', 'file=', 'save='])
+        opts, args = gnu_getopt(sys.argv[1:], 'hlof:s:d',
+                ['help', 'login', 'logout', 'file=', 'save=', 'default'])
         if len(args):
             raise GetoptError('unexpected argument '+args[0])
         actions = set()
@@ -144,6 +149,9 @@ def main():
             if opt[0]=='-s' or opt[0]=='--save':
                 actions.add('login')
                 options['save'] = opt[1]
+            if opt[0]=='-d' or opt[0]=='--default':
+                actions.add('login')
+                options['file'] = os.path.join(os.path.expanduser('~'), '.tunet')
         if len(actions)==0:
             show_status()
         elif len(actions)>1:
