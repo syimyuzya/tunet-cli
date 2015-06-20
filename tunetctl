@@ -11,11 +11,14 @@ from __future__ import print_function, unicode_literals
 
 import json
 import os
+import struct
 import sys
+import uuid
 
 from getopt import gnu_getopt, GetoptError
 from getpass import getpass
-from md5 import md5
+from hashlib import md5
+from socket import socket, AF_INET, SOCK_DGRAM
 from urllib import urlencode
 from urllib2 import urlopen
 
@@ -25,13 +28,19 @@ except ImportError:
     pass
 
 
+
 ########
 
-# URLs
+# IPs, ports and URLs
 
-URL_HOST = 'http://166.111.8.120'
+TUNET_IP = '166.111.8.120'
+TUNET_CHALLENGE_PORT = 3335
+#URL_HOST = 'http://net.tsinghua.edu.cn'
+URL_HOST = 'http://' + TUNET_IP
 URL_LOGIN = URL_HOST + '/cgi-bin/do_login'
+URL_LOGIN_WIN32 = URL_HOST+':3333/cgi-bin/do_login'
 URL_LOGOUT = URL_HOST + '/cgi-bin/do_logout'
+
 
 
 ########
@@ -44,7 +53,8 @@ def check():
     '''
     return urlopen(URL_LOGIN, b'action=check_online').read().split(',')
 
-def login(username, password):
+
+def login_web(username, password):
     '''
     Login with username and password(encrypted).
     
@@ -58,11 +68,57 @@ def login(username, password):
         'n':'100'
     })).read()
 
+
 def logout():
     '''
     Logout.
     '''
     return urlopen(URL_LOGOUT, b'').read()
+
+
+
+########
+
+# win32 utilities
+
+def win32_password(uid, password, key):
+    return md5(b'%c'%(uid&0xff)+password.encode('ascii')+key).hexdigest()
+
+
+def login_win32(username, password):
+    '''
+    Login with username and password(encrypted).
+    Use the private protocol of TUNet.
+
+    This function does not need the raw password.
+    '''
+    sock = socket(AF_INET, SOCK_DGRAM)
+    sock.sendto(struct.pack(b'qq40s', -100, -1, username.encode('ascii')),
+            (TUNET_IP, TUNET_CHALLENGE_PORT))
+    sock.settimeout(10)
+    res, addr = sock.recvfrom(48)
+    print('challenge response received')
+
+    if addr != (TUNET_IP, TUNET_CHALLENGE_PORT) or len(res)!=48:
+        raise IOError('challenge response not received')
+    res_type, res_uid, res_key, res_pad = struct.unpack(b'qQ16s16s', res)
+    if res_pad!=b'\0'*16:
+        raise IOError('invalid challenge response: {}'.format(type))
+    if res_type!=-101:
+        raise IOError('failed with code: {}'.format(type))
+
+    mac = '%012x'%uuid.getnode()
+    mac = ':'.join(mac[i:i+2] for i in range(0, 12, 2))
+    return urlopen(URL_LOGIN_WIN32, urlencode({
+        'username': username,
+        'password': win32_password(res_uid, password, res_key),
+        'n': '117',
+        'type': '2',
+        'drop': '0',
+        'chap': '1',
+        'mac': mac,
+    })).read()
+
 
 
 ########
@@ -76,6 +132,7 @@ def show_version():
           'by SyiMyuZya <syimyuzya@gmail.com>',
           sep='\n',
           file=sys.stderr)
+
 
 def show_usage():
     show_version()
@@ -93,10 +150,13 @@ def show_usage():
           '  Login and save the identity info to <file>.',
           ' -d --default',
           '  Login with the default identity file.(~/.tunet)',
+          ' -w --web',
+          '  Use WEB protocol when logging in (insecure)',
           ' -h --help',
           '  Print this message.',
           sep='\n',
           file=sys.stderr)
+
 
 def show_status(**opt):
     print('Current status:')
@@ -111,6 +171,7 @@ def show_status(**opt):
               '  (Unknown arg3): '+status[3],
               sep='\n')
 
+
 def do_login(**opt):
     if opt.has_key('file'):
         user = json.load(open(opt['file']))
@@ -121,18 +182,25 @@ def do_login(**opt):
         user['pass'] = md5(getpass()).hexdigest()
     if opt.has_key('save'):
         json.dump(user, open(opt['save'], 'w'))
+
+    if 'protocol' in opt and opt['protocol']=='web':
+        login = login_web
+    else:
+        login = login_win32
     res = login(user['name'], user['pass'])
     print('Server response:', res)
     show_status()
+
 
 def do_logout(**opt):
     res = logout()
     print('Server response:', res)
 
+
 def main():
     try:
-        opts, args = gnu_getopt(sys.argv[1:], 'hlof:s:d',
-                ['help', 'login', 'logout', 'file=', 'save=', 'default'])
+        opts, args = gnu_getopt(sys.argv[1:], 'hlof:s:dw',
+                ['help', 'login', 'logout', 'file=', 'save=', 'default', 'web'])
         if len(args):
             raise GetoptError('unexpected argument '+args[0])
         actions = set()
@@ -153,6 +221,9 @@ def main():
             if opt[0]=='-d' or opt[0]=='--default':
                 actions.add('login')
                 options['file'] = os.path.join(os.path.expanduser('~'), '.tunet')
+            if opt[0]=='-w' or opt[0]=='--web':
+                options['protocol'] = 'web'
+
         if len(actions)==0:
             show_status()
         elif len(actions)>1:
@@ -162,12 +233,14 @@ def main():
             {'help':show_usage,
              'login':do_login,
              'logout':do_logout}[next(iter(actions))](**options)
+
     except GetoptError as e:
         print('Err: '+e.msg,
               'Use -h(--help) for help',
               sep='\n', file=sys.stderr)
     except KeyboardInterrupt:
         print('Canceled', file=sys.stderr)
+
 
 if __name__=='__main__':
     main()
