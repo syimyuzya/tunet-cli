@@ -29,8 +29,9 @@ except ImportError:
 
 # URLs
 
-URL_LOGIN = 'http://net.tsinghua.edu.cn/cgi-bin/do_login'
-URL_LOGOUT = 'http://net.tsinghua.edu.cn/cgi-bin/do_logout'
+URL_HOST = 'http://166.111.8.120'
+URL_LOGIN = URL_HOST + '/cgi-bin/do_login'
+URL_LOGOUT = URL_HOST + '/cgi-bin/do_logout'
 
 
 ########
