@@ -127,7 +127,7 @@ def login_win32(username, password):
 
 def show_version():
     print('TUNet Command Line Tool',
-          'version 0.0.1',
+          'version 0.1.0',
           '',
           'by SyiMyuZya <syimyuzya@gmail.com>',
           sep='\n',
@@ -153,7 +153,7 @@ def show_usage():
           ' -w --web',
           '  Use WEB protocol when logging in (insecure)',
           ' -h --help',
-          '  Print this message.',
+          '  Print this help.',
           sep='\n',
           file=sys.stderr)
     return 0
