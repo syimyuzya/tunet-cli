@@ -45,7 +45,7 @@ URL_LOGOUT = URL_HOST + '/cgi-bin/do_logout'
 
 ########
 
-# utilities
+# net utilities
 
 def check():
     '''
@@ -66,7 +66,7 @@ def login_web(username, password):
         'drop':'0',
         'type':'1',
         'n':'100'
-    })).read()
+    })).read().split(',')
 
 
 def logout():
@@ -79,7 +79,7 @@ def logout():
 
 ########
 
-# win32 utilities
+# win32 net utilities
 
 def win32_password(uid, password, key):
     return md5(b'%c'%(uid&0xff)+password.encode('ascii')+key).hexdigest()
@@ -117,7 +117,7 @@ def login_win32(username, password):
         'drop': '0',
         'chap': '1',
         'mac': mac,
-    })).read()
+    })).read().split(',')
 
 
 
@@ -156,20 +156,22 @@ def show_usage():
           '  Print this message.',
           sep='\n',
           file=sys.stderr)
+    return 0
 
 
 def show_status(**opt):
     print('Current status:')
     status = check()
-    if len(status)==1:
-        print('  Not logged in.')
-    else:
-        print('  User: '+status[1],
+    if len(status)==5:
+        print('  User ID: '+status[0],
+              '  User: '+status[1],
               '  Usage: '+status[2]+'B',
+              '  (Unknown): '+status[3],
               '  Time: '+status[4]+'s',
-              '  (Unknown arg0): '+status[0],
-              '  (Unknown arg3): '+status[3],
               sep='\n')
+    else:
+        print('  Not logged in.')
+    return 0
 
 
 def do_login(**opt):
@@ -188,13 +190,26 @@ def do_login(**opt):
     else:
         login = login_win32
     res = login(user['name'], user['pass'])
-    print('Server response:', res)
-    show_status()
+    if len(res)==5:
+        print('Server response:',
+              '  User ID: '+res[0],
+              '  (Unknown): '+res[1],
+              '  Usage: '+res[2]+'B',
+              '  (Unknown): '+res[3],
+              '  (Unknown): '+res[4],
+              sep='\n')
+        show_status()
+        return 0
+    else:
+        print('Server response:', ','.join(res))
+        show_status()
+        return 2
 
 
 def do_logout(**opt):
     res = logout()
     print('Server response:', res)
+    return int(res!='logout_ok')*2
 
 
 def main():
@@ -230,9 +245,11 @@ def main():
             raise GetoptError('can not perform multiple actions: '
                     +repr(list(actions)))
         else:
-            {'help':show_usage,
-             'login':do_login,
-             'logout':do_logout}[next(iter(actions))](**options)
+            res = {'help':show_usage,
+                   'login':do_login,
+                   'logout':do_logout}[next(iter(actions))](**options)
+            if res:
+                sys.exit(res)
 
     except GetoptError as e:
         print('Err: '+e.msg,
