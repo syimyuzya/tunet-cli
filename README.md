@@ -1,6 +1,6 @@
 # TUNet CLI
 
-version 0.0.1
+version 0.2.0
 
 by 思無邪SyiMyuZya
 
@@ -22,12 +22,15 @@ by 思無邪SyiMyuZya
 
     ```sh
     ./tunetctl -l  # （提示輸入用戶名、密碼）
-    
+
+    # 登錄並保存用戶信息到指定文件
+    ./tunetctl -s user.txt
+
     # 使用文件保存的用戶信息：
     ./tunetctl -f user.txt
 
-    # 登錄並保存用戶信息到文件
-    ./tunetctl -s user.txt
+    # 使用默認文件（~/.tunet）登入
+    ./tunetctl -d
     ```
 
 3.  登出
@@ -46,8 +49,9 @@ by 思無邪SyiMyuZya
 
 ### TODO
 
+* [x] 支持新版協議
 * [x] 用文件保存/讀取用戶名與密碼（md5散列值）
-* [ ] 重構選項解析部分的代碼，用argparse替代getopt
+* [ ] ~~重構選項解析部分的代碼，用argparse替代getopt~~
 * [ ] 處理網絡異常
-* [ ] 將服務器原始錯誤信息改為提示信息
+* [ ] ~~將服務器原始錯誤信息改為提示信息（新協議原始信息已經足夠）~~
 * [ ] 多語言（不一定實作…因為無圖形界面時貌似不需要多語言？）
