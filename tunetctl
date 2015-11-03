@@ -41,6 +41,27 @@ URL_INFO = URL_HOST + '/rad_user_info.php'
 
 ########
 
+# utilities
+
+def sizeof_fmt(num, suffix='B', si=False):
+    if si:
+        units = ('','k','M','G','T','P','E','Z')
+        last = 'Y'
+        base = 1000.0
+    else:
+        units = ('','Ki','Mi','Gi','Ti','Pi','Ei','Zi')
+        last = 'Yi'
+        base = 1024.0
+    for unit in units:
+        if abs(num) < base:
+            return "%.2f%s%s" % (num, unit, suffix)
+        num /= base
+    return "%.2f%s%s" % (num, last, suffix)
+
+
+
+########
+
 # net utilities
 
 def check():
@@ -85,7 +106,7 @@ def logout():
 
 def show_version():
     print('TUNet Command Line Tool',
-          'version 0.2.0',
+          'version 0.2.1',
           '',
           'by SyiMyuZya <syimyuzya@gmail.com>',
           sep='\n',
@@ -121,24 +142,26 @@ def show_status(**opt):
     if len(status)==1 and status[0]==b'':
         print('  (offline)')
     else:
+        def fmtsize(s):
+            return '{} ({}B)'.format(sizeof_fmt(int(s), si=True), s)
         items = [
                 ('Username', None),
                 ('Login time', None),
                 ('Current time', None),
-                ('Traffic in', None),
-                ('Traffic out', None),
+                ('Traffic in', fmtsize),
+                ('Traffic out', fmtsize),
                 (None, None),  # 5
-                ('Traffic usage', None),
+                ('Traffic usage', fmtsize),
                 (None, None),  # 7
                 ('IP', None),
-                ('(Unknown)', None),  # 9
-                ('(Unknown)', None),  # 10
-                ('Balance', lambda x: '{:.2f}'.format(float(x))),
+                (None, None),  # 9
+                (None, None),  # 10
+                ('Balance', lambda x: '{:.4f}'.format(float(x))),
                 (None, None),  # 12
                 ]
         for i, item in enumerate(items):
             print('  ', end='')
-            print(item[0] if item[0] else '(Unknown)', end=' ')
+            print(item[0] if item[0] else '(Unknown)', end=': ')
             print(status[i] if not item[1] else item[1](status[i]))
     return 0
 
