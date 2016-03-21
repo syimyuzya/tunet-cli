@@ -9,13 +9,14 @@ by SyiMyuZya <syimyuzya@gmail.com>
 
 from __future__ import print_function, unicode_literals
 
+import argparse
 import json
 import os
 import struct
 import sys
 import uuid
 
-from getopt import gnu_getopt, GetoptError
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from getpass import getpass
 from hashlib import md5
 from socket import socket, AF_INET, SOCK_DGRAM
@@ -104,38 +105,6 @@ def logout():
 
 # interface
 
-def show_version():
-    print('TUNet Command Line Tool',
-          'version 0.2.1',
-          '',
-          'by SyiMyuZya <syimyuzya@gmail.com>',
-          sep='\n',
-          file=sys.stderr)
-
-
-def show_usage():
-    show_version()
-    print('',
-          'Usage:',
-          ' no option:',
-          '  Show the current connect status of this device.',
-          ' -l --login:',
-          '  Login. Will prompt input for username and password.',
-          ' -o --logout:',
-          '  Logout.',
-          ' -f <file> --file=<file>',
-          '  Login with identity file <file>.',
-          ' -s <file> --save=<file>',
-          '  Login and save the identity info to <file>.',
-          ' -d --default',
-          '  Login with the default identity file.(~/.tunet)',
-          ' -h --help',
-          '  Print this help.',
-          sep='\n',
-          file=sys.stderr)
-    return 0
-
-
 def show_status(**opt):
     print('Current status:')
     status = get_status()
@@ -166,70 +135,95 @@ def show_status(**opt):
     return 0
 
 
-def do_login(**opt):
-    if opt.has_key('file'):
-        user = json.load(open(opt['file']))
+def do_login(args):
+    if args.file:
+        user = json.load(args.file)
     else:
         user = {}
-        print('User: ', end='')
-        user['name'] = raw_input()
+        user['name'] = raw_input('User: ')
         user['pass'] = md5(getpass()).hexdigest()
-    if opt.has_key('save'):
-        json.dump(user, open(opt['save'], 'w'))
+    if args.save:
+        json.dump(user, open(args.save, 'w'))
+        print('Username & password saved to {}'.format(args.save))
 
     res = login(user['name'], user['pass'])
     print('Server response:', res)
     show_status()
-    return 0 if res==b'Login is successful.' else 2
+    return 0 if res==b'Login is successful.' else 1
 
 
-def do_logout(**opt):
+def do_logout(args):
     res = logout()
     print('Server response:', res)
-    return 0 if res==b'Logout is successful.' else 2
+    return 0 if res==b'Logout is successful.' else 1
 
+
+PROG_USAGE = '''\
+%(prog)s [-h] [-v] [[-l] [-s [FILE] | -f [FILE]] | -o]
+'''
+PROG_DESCRIPTION = '''\
+TUNet Authorisation Command Line Tool
+'''
+PROG_AUTHOR = '''\
+by SyiMyuZya <syimyuzya@gmail.com>
+'''
+PROG_VERSION = '''\
+version 0.4.0
+'''
+PROG_EPILOG = '''\
+if run without any option, show current connection status of this device
+'''
+DEFAULT_FILE = os.path.join('~', '.tunet')
 
 def main():
     try:
-        opts, args = gnu_getopt(sys.argv[1:], 'hlof:s:d',
-                ['help', 'login', 'logout', 'file=', 'save=', 'default'])
-        if len(args):
-            raise GetoptError('unexpected argument '+args[0])
-        actions = set()
-        options = {}
-        for opt in opts:
-            if opt[0]=='-h' or opt[0]=='--help':
-                actions.add('help')
-            if opt[0]=='-l' or opt[0]=='--login':
-                actions.add('login')
-            if opt[0]=='-o' or opt[0]=='--logout':
-                actions.add('logout')
-            if opt[0]=='-f' or opt[0]=='--file':
-                actions.add('login')
-                options['file'] = opt[1]
-            if opt[0]=='-s' or opt[0]=='--save':
-                actions.add('login')
-                options['save'] = opt[1]
-            if opt[0]=='-d' or opt[0]=='--default':
-                actions.add('login')
-                options['file'] = os.path.join(os.path.expanduser('~'), '.tunet')
+        parser = ArgumentParser(usage=PROG_USAGE,
+                description=PROG_DESCRIPTION+PROG_AUTHOR,
+                epilog=PROG_EPILOG, formatter_class=RawDescriptionHelpFormatter)
+        parser.add_argument('-v', '--version', action='version',
+                version=PROG_DESCRIPTION+PROG_VERSION)
 
-        if len(actions)==0:
-            show_status()
-        elif len(actions)>1:
-            raise GetoptError('can not perform multiple actions: '
-                    +repr(list(actions)))
+        action_group = parser.add_argument_group('actions')
+        action_group.add_argument('-l', '--login', action='store_true',
+                help='''login (prompt for username and password
+                if no file specified)''')
+
+        login_group = parser.add_argument_group('login options (imply -l)')
+        login_egroup = login_group.add_mutually_exclusive_group()
+        login_egroup.add_argument('-s', '--save', nargs='?',
+                const=os.path.expanduser(DEFAULT_FILE), metavar='FILE',
+                help='''login and save username and (hashed) password to FILE
+                (default: {})'''.format(DEFAULT_FILE))
+        login_egroup.add_argument('-f', '--file', type=file, nargs='?',
+                const=os.path.expanduser(DEFAULT_FILE),
+                help='''login with username and password from saved FILE
+                (default: {})'''.format(DEFAULT_FILE))
+
+        action_group.add_argument('-o', '--logout', action='store_true',
+                help='''logout''')
+
+        # deprecated option
+        parser.add_argument('-d', '--default', action='store_true',
+                help=argparse.SUPPRESS)
+
+        args = parser.parse_args()
+
+        if args.default:
+            parser.error('-d is deprecated, use -f without argument instead')
+
+        if args.file or args.save:
+            args.login = True
+
+        if args.login and args.logout:
+            parser.error('cannot perform multiple actions: login, logout')
+
+        if args.login:
+            res = do_login(args)
+        elif args.logout:
+            res = do_logout(args)
         else:
-            res = {'help':show_usage,
-                   'login':do_login,
-                   'logout':do_logout}[next(iter(actions))](**options)
-            if res:
-                sys.exit(res)
-
-    except GetoptError as e:
-        print('Err: '+e.msg,
-              'Use -h(--help) for help',
-              sep='\n', file=sys.stderr)
+            res = show_status()
+        sys.exit(res)
     except KeyboardInterrupt:
         print('Canceled', file=sys.stderr)
 
