@@ -105,7 +105,7 @@ def logout():
 
 # interface
 
-def show_status(**opt):
+def show_status():
     print('Current status:')
     status = get_status()
     if len(status)==1 and status[0]==b'':
