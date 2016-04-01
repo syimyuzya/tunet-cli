@@ -144,8 +144,8 @@ def do_login(args):
         user = json.load(args.file)
     else:
         user = {}
-        user['name'] = raw_input('User: ')
-        user['pass'] = md5(getpass()).hexdigest()
+        user['name'] = unicode(raw_input('User: '))
+        user['pass'] = unicode(md5(getpass()).hexdigest())
     if args.save:
         json.dump(user, open(args.save, 'w'))
         print('Username & password saved to {}'.format(args.save))
