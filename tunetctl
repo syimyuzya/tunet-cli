@@ -17,6 +17,7 @@ import sys
 import uuid
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from datetime import datetime, timedelta
 from getpass import getpass
 from hashlib import md5
 from socket import socket, AF_INET, SOCK_DGRAM
@@ -113,10 +114,13 @@ def show_status():
     else:
         def fmtsize(s):
             return '{} ({}B)'.format(sizeof_fmt(int(s), si=True), s)
+        def fmttime(s):
+            return (datetime.utcfromtimestamp(int(s)) + \
+                    timedelta(hours=8)).strftime('%Y-%m-%dT%H:%M:%S+0800')
         items = [
                 ('Username', None),
-                ('Login time', None),
-                ('Current time', None),
+                ('Login time', fmttime),
+                ('Current time', fmttime),
                 ('Traffic in', fmtsize),
                 ('Traffic out', fmtsize),
                 (None, None),  # 5
