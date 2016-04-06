@@ -9,6 +9,14 @@ by SyiMyuZya <syimyuzya@gmail.com>
 
 from __future__ import print_function, unicode_literals
 
+# check if `python` points to a newer version rather than Python 2
+import sys
+if sys.version_info>=(3,):
+    print('A newer version of Python detected, switching to Python 2...')
+    import os
+    os.execl('/usr/bin/env', '/usr/bin/env', 'python2', __file__)
+
+
 import argparse
 import json
 import os
