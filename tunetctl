@@ -69,6 +69,19 @@ def sizeof_fmt(num, suffix='B', si=False):
     return "%.2f %s%s" % (num, last, suffix)
 
 
+def duration_fmt(num):
+    units = [('s', 60), ('m', 60), ('h', 24), ('d', None)]
+    rt = []
+    for unit, limit in units:
+        rt.append('{:d}{}'.format(num%limit if limit else num, unit))
+        if limit is None:
+            break
+        num //= limit
+        if num==0:
+            break
+    return ' '.join(reversed(rt))
+
+
 
 ########
 
@@ -120,11 +133,25 @@ def show_status():
     if len(status)==1 and status[0]==b'':
         print('  (offline)')
     else:
+        def require_int(func):
+            def fn(s):
+                try:
+                    _ = int(s)
+                except ValueError as e:
+                    return s
+                return func(s)
+            return fn
+        @require_int
         def fmtsize(s):
             return '{} ({} B)'.format(sizeof_fmt(int(s), si=True), s)
+        @require_int
         def fmttime(s):
             return (datetime.utcfromtimestamp(int(s)) + \
                     timedelta(hours=8)).strftime('%Y-%m-%dT%H:%M:%S+0800')
+        @require_int
+        def fmtduration(s):
+            return '{} ({} s)'.format(duration_fmt(int(s)), s)
+
         items = [
                 ('Username', None),
                 ('Login time', fmttime),
@@ -133,7 +160,7 @@ def show_status():
                 ('Traffic out', fmtsize),
                 (None, None),  # 5
                 ('Traffic usage', fmtsize),
-                (None, None),  # 7
+                ('Cumulative time online', fmtduration),
                 ('IP', None),
                 (None, None),  # 9
                 (None, None),  # 10
