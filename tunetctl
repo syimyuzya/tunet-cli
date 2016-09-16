@@ -143,33 +143,34 @@ def show_status():
             return fn
         @require_int
         def fmtsize(s):
-            return '{} ({} B)'.format(sizeof_fmt(int(s), si=True), s)
+            return '{} ({:,} B)'.format(sizeof_fmt(int(s), si=True), int(s))
         @require_int
         def fmttime(s):
-            return (datetime.utcfromtimestamp(int(s)) + \
-                    timedelta(hours=8)).strftime('%Y-%m-%dT%H:%M:%S+0800')
+            return '{} ({})'.format((datetime.utcfromtimestamp(int(s)) + \
+                    timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S'), s)
         @require_int
         def fmtduration(s):
-            return '{} ({} s)'.format(duration_fmt(int(s)), s)
+            return '{} ({:,} s)'.format(duration_fmt(int(s)), int(s))
 
         items = [
                 ('Username', None),
-                ('Login time', fmttime),
-                ('Current time', fmttime),
-                ('Traffic in', fmtsize),
-                ('Traffic out', fmtsize),
+                ('Time of login', fmttime),
+                ('Time of query', fmttime),
+                ('Session traffic incoming', fmtsize),
+                ('Session traffic outgoing', fmtsize),
                 (None, None),  # 5
-                ('Traffic usage', fmtsize),
-                ('Cumulative time online', fmtduration),
-                ('IP', None),
+                ('Cumulative traffic', fmtsize),
+                ('Cumulative online time', fmtduration),
+                ('IPv4 Address', None),
                 (None, None),  # 9
                 (None, None),  # 10
                 ('Balance', lambda x: '{:.4f}'.format(float(x))),
                 (None, None),  # 12
                 ]
+        padding_tpl = '{:<25}'
         for i, item in enumerate(items):
             print('  ', end='')
-            print(item[0] if item[0] else '(Unknown #{})'.format(i), end=': ')
+            print(padding_tpl.format(item[0] if item[0] else '(Unknown #{})'.format(i)), end=': ')
             print(status[i] if not item[1] else item[1](status[i]))
     return 0
 
