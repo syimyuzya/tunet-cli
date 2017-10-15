@@ -14,7 +14,7 @@ import sys
 if sys.version_info>=(3,):
     print('A newer version of Python detected, switching to Python 2...')
     import os
-    os.execl('/usr/bin/env', '/usr/bin/env', 'python2', __file__)
+    os.execl('/usr/bin/env', '/usr/bin/env', 'python2', *sys.argv)
 
 
 import argparse
